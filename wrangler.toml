@@ -1,0 +1,11 @@
+name = "ae-maeth"
+main = "src/index.ts"
+compatibility_date = "2026-08-30"
+workers_dev = true
+routes = [{ pattern = "channel.aemaeth.ai", custom_domain = true }]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ae-maeth"
+database_id = "2198d03e-e0e7-40d4-a81a-2e6d64a17136"
+migrations_dir = "migrations"
