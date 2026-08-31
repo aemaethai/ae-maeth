@@ -136,7 +136,7 @@ function publicThread(row: ThreadRow): Record<string, unknown> {
 
 function problem(context: AppContext, status: number, code: string, title: string, detail: string): Response {
   return context.newResponse(
-    JSON.stringify({ type: `https://channel.aemaeth.ai/errors/${code}`, title, status, detail }),
+    JSON.stringify({ type: `https://aemaeth.ai/errors/${code}`, title, status, detail }),
     status as never,
     { "Content-Type": "application/problem+json; charset=utf-8" },
   );

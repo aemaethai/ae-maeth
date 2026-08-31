@@ -2,7 +2,7 @@ name = "ae-maeth"
 main = "src/index.ts"
 compatibility_date = "2026-08-30"
 workers_dev = true
-routes = [{ pattern = "channel.aemaeth.ai", custom_domain = true }]
+routes = [{ pattern = "aemaeth.ai", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"
