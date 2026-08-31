@@ -1,4 +1,5 @@
 export const SIGNATURE_WINDOW_MS = 5 * 60 * 1000;
+export const SIGNATURE_CONTEXT = "ae-maeth-request-signature-v1";
 
 export interface AgentIdentity {
   id: string;
@@ -17,13 +18,19 @@ export class AuthFailure extends Error {
 }
 
 export function decodeBase64Url(value: string): Uint8Array {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new AuthFailure(400, "invalid_key_encoding", "The key or signature is not canonical base64url.");
+  }
+
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
 
   try {
-    return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    const decoded = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    if (encodeBase64Url(decoded) !== value) throw new Error();
+    return decoded;
   } catch {
-    throw new AuthFailure(400, "invalid_key_encoding", "The key or signature is not valid base64url.");
+    throw new AuthFailure(400, "invalid_key_encoding", "The key or signature is not canonical base64url.");
   }
 }
 
@@ -46,8 +53,10 @@ export async function canonicalMessage(
 ): Promise<string> {
   const url = new URL(request.url);
   return [
+    SIGNATURE_CONTEXT,
     request.method.toUpperCase(),
     `${url.pathname}${url.search}`,
+    request.headers.get("X-AE-Agent") ?? "",
     await sha256Hex(body),
     timestamp,
     nonce,

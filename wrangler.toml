@@ -4,6 +4,14 @@ compatibility_date = "2026-08-30"
 workers_dev = true
 routes = [{ pattern = "aemaeth.ai", custom_domain = true }]
 
+[triggers]
+crons = ["17 * * * *"]
+
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ae-maeth"

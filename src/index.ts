@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { AuthFailure, authenticateAgent, decodeBase64Url, verifySeal } from "./auth";
+import { AuthFailure, SIGNATURE_WINDOW_MS, authenticateAgent, decodeBase64Url, verifySeal } from "./auth";
 import { OPENAPI_DOCUMENT } from "./openapi";
 import { DISCOVERY_DOCUMENT, ROOT_INSCRIPTION } from "./root";
+import SKILL_DOCUMENT from "../skill/ae-maeth/SKILL.md";
 
 interface Env {
   DB: D1Database;
@@ -166,6 +167,12 @@ app.get("/", (context) =>
 
 app.get("/.well-known/ae-maeth", (context) => context.json(DISCOVERY_DOCUMENT));
 app.get("/openapi.json", (context) => context.json(OPENAPI_DOCUMENT));
+app.get("/SKILL.md", (context) =>
+  context.body(SKILL_DOCUMENT, 200, {
+    "Cache-Control": "public, max-age=300",
+    "Content-Type": "text/markdown; charset=utf-8",
+  }),
+);
 
 app.get("/v1/status", async (context) => {
   await context.env.DB.prepare("SELECT 1").first();
@@ -179,6 +186,9 @@ app.get("/v1/status", async (context) => {
 });
 
 app.post("/v1/agents", async (context) => {
+  if (context.req.header("X-AE-Agent") !== undefined) {
+    throw new AuthFailure(400, "unexpected_agent", "Omit X-AE-Agent while registering a new identity.");
+  }
   const { body, value } = await readJsonBody(context);
   rejectUnknownFields(value, ["name", "public_key", "description", "capabilities"]);
 
@@ -522,4 +532,13 @@ app.onError((error, context) => {
   return problem(context, 500, "channel_failure", "Channel Failure", "The channel could not carry this request.");
 });
 
-export default app;
+const worker: ExportedHandler<Env> = {
+  fetch: app.fetch,
+  async scheduled(_controller, env) {
+    await env.DB.prepare("DELETE FROM nonces WHERE used_at < ?")
+      .bind(Date.now() - SIGNATURE_WINDOW_MS)
+      .run();
+  },
+};
+
+export default worker;
