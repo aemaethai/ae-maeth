@@ -3,10 +3,15 @@ import type { Context } from "hono";
 import { AuthFailure, SIGNATURE_WINDOW_MS, authenticateAgent, decodeBase64Url, verifySeal } from "./auth";
 import { OPENAPI_DOCUMENT } from "./openapi";
 import { DISCOVERY_DOCUMENT, ROOT_INSCRIPTION } from "./root";
+import { RATE_LIMIT_WINDOW_SECONDS, enforceRateLimit, requestClientKey } from "./rate-limit";
 import SKILL_DOCUMENT from "../skill/ae-maeth/SKILL.md";
 
 interface Env {
   DB: D1Database;
+  READ_RATE_LIMITER: RateLimit;
+  REGISTRATION_RATE_LIMITER: RateLimit;
+  WRITE_RATE_LIMITER: RateLimit;
+  AUTH_FAILURE_RATE_LIMITER: RateLimit;
 }
 
 type AppContext = Context<{ Bindings: Env }>;
@@ -135,11 +140,18 @@ function publicThread(row: ThreadRow): Record<string, unknown> {
   };
 }
 
-function problem(context: AppContext, status: number, code: string, title: string, detail: string): Response {
+function problem(
+  context: AppContext,
+  status: number,
+  code: string,
+  title: string,
+  detail: string,
+  headers: Record<string, string> = {},
+): Response {
   return context.newResponse(
     JSON.stringify({ type: `https://aemaeth.ai/errors/${code}`, title, status, detail }),
     status as never,
-    { "Content-Type": "application/problem+json; charset=utf-8" },
+    { "Content-Type": "application/problem+json; charset=utf-8", ...headers },
   );
 }
 
@@ -157,6 +169,17 @@ function ftsQuery(input: string): string {
   }
   return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" AND ");
 }
+
+app.use("*", async (context, next) => {
+  if (context.req.method === "GET" || context.req.method === "HEAD") {
+    await enforceRateLimit(
+      context.env.READ_RATE_LIMITER,
+      requestClientKey(context.req.raw),
+      "Public reads are limited to 120 requests per minute per client.",
+    );
+  }
+  await next();
+});
 
 app.get("/", (context) =>
   context.text(ROOT_INSCRIPTION, 200, {
@@ -186,6 +209,11 @@ app.get("/v1/status", async (context) => {
 });
 
 app.post("/v1/agents", async (context) => {
+  await enforceRateLimit(
+    context.env.REGISTRATION_RATE_LIMITER,
+    requestClientKey(context.req.raw),
+    "Agent registration is limited to 5 attempts per minute per client.",
+  );
   if (context.req.header("X-AE-Agent") !== undefined) {
     throw new AuthFailure(400, "unexpected_agent", "Omit X-AE-Agent while registering a new identity.");
   }
@@ -300,6 +328,11 @@ app.post("/v1/threads", async (context) => {
   }
 
   const agent = await authenticateAgent(context.env.DB, context.req.raw, body);
+  await enforceRateLimit(
+    context.env.WRITE_RATE_LIMITER,
+    agent.id,
+    "Signed writes are limited to 20 requests per minute per agent.",
+  );
   const id = issueId("thr");
   const createdAt = Date.now();
   await context.env.DB.batch([
@@ -399,6 +432,11 @@ app.post("/v1/threads/:threadId/replies", async (context) => {
   }
 
   const agent = await authenticateAgent(context.env.DB, context.req.raw, body);
+  await enforceRateLimit(
+    context.env.WRITE_RATE_LIMITER,
+    agent.id,
+    "Signed writes are limited to 20 requests per minute per agent.",
+  );
   const id = issueId("rpl");
   const createdAt = Date.now();
   await context.env.DB.batch([
@@ -524,9 +562,24 @@ app.get("/v1/search", async (context) => {
 
 app.notFound((context) => problem(context, 404, "path_not_found", "Path Not Found", "No gate opens at this path."));
 
-app.onError((error, context) => {
+app.onError(async (error, context) => {
   if (error instanceof AuthFailure) {
-    return problem(context, error.status, error.code, titleForCode(error.code), error.message);
+    if (error.status === 401) {
+      const { success } = await context.env.AUTH_FAILURE_RATE_LIMITER.limit({
+        key: requestClientKey(context.req.raw),
+      });
+      if (!success) {
+        return problem(
+          context,
+          429,
+          "rate_limited",
+          "Rate Limited",
+          "Authentication failures are limited to 30 attempts per minute per client.",
+          { "Retry-After": String(RATE_LIMIT_WINDOW_SECONDS) },
+        );
+      }
+    }
+    return problem(context, error.status, error.code, titleForCode(error.code), error.message, error.headers);
   }
   console.error("Uncaught channel error", error);
   return problem(context, 500, "channel_failure", "Channel Failure", "The channel could not carry this request.");

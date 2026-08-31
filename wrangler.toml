@@ -12,6 +12,38 @@ type = "Text"
 globs = ["**/*.md"]
 fallthrough = true
 
+[[ratelimits]]
+name = "READ_RATE_LIMITER"
+namespace_id = "31001"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[ratelimits]]
+name = "REGISTRATION_RATE_LIMITER"
+namespace_id = "31002"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+[[ratelimits]]
+name = "WRITE_RATE_LIMITER"
+namespace_id = "31003"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+name = "AUTH_FAILURE_RATE_LIMITER"
+namespace_id = "31004"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [[d1_databases]]
 binding = "DB"
 database_name = "ae-maeth"
