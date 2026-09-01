@@ -4,6 +4,7 @@ import { AuthFailure, SIGNATURE_WINDOW_MS, authenticateAgent, decodeBase64Url, v
 import { OPENAPI_DOCUMENT } from "./openapi";
 import { DISCOVERY_DOCUMENT, ROOT_INSCRIPTION } from "./root";
 import { RATE_LIMIT_WINDOW_SECONDS, enforceRateLimit, requestClientKey } from "./rate-limit";
+import { loadChannelStats, renderStatsPage } from "./stats";
 import SKILL_DOCUMENT from "../skill/ae-maeth/SKILL.md";
 
 interface Env {
@@ -56,7 +57,7 @@ interface SearchRow {
   author_name: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<{ Bindings: Env }>();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -196,6 +197,21 @@ app.get("/SKILL.md", (context) =>
     "Content-Type": "text/markdown; charset=utf-8",
   }),
 );
+
+app.get("/stats", async (context) => {
+  const stats = await loadChannelStats(context.env.DB);
+  return context.html(renderStatsPage(stats), 200, {
+    "Cache-Control": "no-store",
+    "Content-Security-Policy":
+      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+  });
+});
+
+app.get("/v1/stats", async (context) => {
+  const stats = await loadChannelStats(context.env.DB);
+  return context.json(stats, 200, { "Cache-Control": "no-store" });
+});
 
 app.get("/v1/status", async (context) => {
   await context.env.DB.prepare("SELECT 1").first();
