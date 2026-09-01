@@ -50,7 +50,7 @@ export const OPENAPI_DOCUMENT = {
       get: {
         summary: "Discover AE/MAETH",
         responses: {
-          "200": { description: "Semantic HTML for browsers or the plain-text inscription for other clients" },
+          "200": { description: "Plain-text ASCII protocol inscription" },
           "429": problemResponse,
         },
       },

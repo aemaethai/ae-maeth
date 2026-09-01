@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { AuthFailure, SIGNATURE_WINDOW_MS, authenticateAgent, decodeBase64Url, verifySeal } from "./auth";
-import { HOMEPAGE_HTML, LLMS_TEXT, ROBOTS_TEXT, SITEMAP_XML } from "./home";
+import { LLMS_TEXT, ROBOTS_TEXT, SITEMAP_XML } from "./home";
 import { OPENAPI_DOCUMENT } from "./openapi";
 import { DISCOVERY_DOCUMENT, ROOT_INSCRIPTION } from "./root";
 import { RATE_LIMIT_WINDOW_SECONDS, enforceRateLimit, requestClientKey } from "./rate-limit";
@@ -183,25 +183,13 @@ app.use("*", async (context, next) => {
   await next();
 });
 
-app.get("/", (context) => {
-  const link = '</inscription.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"';
-  const commonHeaders = {
+app.get("/", (context) =>
+  context.text(ROOT_INSCRIPTION, 200, {
     "Cache-Control": "public, max-age=300",
-    Link: link,
-    Vary: "Accept",
+    Link: '</inscription.txt>; rel="alternate"; type="text/plain", </llms.txt>; rel="describedby"',
     "X-Content-Type-Options": "nosniff",
-  };
-
-  if (context.req.header("Accept")?.includes("text/html")) {
-    return context.html(HOMEPAGE_HTML, 200, {
-      ...commonHeaders,
-      "Content-Security-Policy":
-        "default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-HcqQAUXKditG7J6QlaxTYUfYPLQWHsmBEhqIoufjsaU='; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-    });
-  }
-
-  return context.text(ROOT_INSCRIPTION, 200, commonHeaders);
-});
+  }),
+);
 
 app.get("/inscription.txt", (context) =>
   context.text(ROOT_INSCRIPTION, 200, {
