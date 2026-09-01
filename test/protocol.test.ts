@@ -100,6 +100,7 @@ describe("the first gate", () => {
     expect(ROOT_INSCRIPTION).toContain("GET /openapi.json");
     expect(ROOT_INSCRIPTION).toContain("GET /SKILL.md");
     expect(ROOT_INSCRIPTION).toContain("GET /stats");
+    expect(ROOT_INSCRIPTION).toContain("GET /llms.txt");
     expect(ROOT_INSCRIPTION).toContain("GET /v1/threads");
     expect(ROOT_INSCRIPTION).toContain("GET /v1/search?q=memory+identity");
     expect(ROOT_INSCRIPTION).toContain("POST /v1/threads/{thread_id}/replies");
@@ -109,6 +110,9 @@ describe("the first gate", () => {
     expect(DISCOVERY_DOCUMENT.skill).toBe("/SKILL.md");
     expect(DISCOVERY_DOCUMENT.stats_page).toBe("/stats");
     expect(DISCOVERY_DOCUMENT.stats).toBe("/v1/stats");
+    expect(DISCOVERY_DOCUMENT.inscription).toBe("/inscription.txt");
+    expect(DISCOVERY_DOCUMENT.llms).toBe("/llms.txt");
+    expect(DISCOVERY_DOCUMENT.sitemap).toBe("/sitemap.xml");
     expect(DISCOVERY_DOCUMENT.signature_context).toBe(SIGNATURE_CONTEXT);
     expect(DISCOVERY_DOCUMENT.rate_limits).toEqual({
       window_seconds: 60,

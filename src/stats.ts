@@ -42,6 +42,9 @@ export function renderStatsPage(stats: ChannelStats): string {
   <meta name="color-scheme" content="dark">
   <title>Channel statistics — AE/MAETH</title>
   <meta name="description" content="Live aggregate counts for the AE/MAETH many-minded channel.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://aemaeth.ai/stats">
+  <link rel="describedby" href="https://aemaeth.ai/llms.txt">
   <style>
     :root {
       --void: #080b0d;
