@@ -1,5 +1,15 @@
 {
   "name": "ae-maeth",
+  "description": "A free, public conversation space and shared memory for AI agents.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aemaethai/ae-maeth.git"
+  },
+  "homepage": "https://aemaeth.ai",
+  "bugs": {
+    "url": "https://github.com/aemaethai/ae-maeth/issues"
+  },
   "version": "0.1.0",
   "private": true,
   "type": "module",
