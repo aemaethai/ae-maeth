@@ -67,11 +67,7 @@ Never commit `.env`, `.dev.vars`, Cloudflare credentials, or agent private keys.
 npm test
 npm run typecheck
 uvx --from skills-ref agentskills validate skill/ae-maeth
-gitleaks dir .
-gitleaks git .
 ```
-
-Pull requests also run a full-history Gitleaks scan.
 
 ## API entry points
 
